@@ -8,4 +8,12 @@ This app only works when connected to the same local network as the sensor.
 
 ---
 
+<p align="center">
+  <img src="assets/raspberry-pi.jpg" alt="Application Preview" />
+  <br />
+  <em>Running on a Raspberry Pi 4 with a custom display</em>
+</p>
+
+<br />
+
 ![Application Preview](assets/app_preview.png)
