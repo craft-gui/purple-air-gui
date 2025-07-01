@@ -612,6 +612,9 @@ name = "color"
 version = "0.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7ae467d04a8a8aea5d9a49018a6ade2e4221d92968e8ce55a48c0b1164e5f698"
+dependencies = [
+ "bytemuck",
+]
 
 [[package]]
 name = "combine"
@@ -693,7 +696,8 @@ dependencies = [
  "tokio",
  "ui-events",
  "ui-events-winit",
- "vello",
+ "vello_common",
+ "vello_hybrid",
  "wasm-bindgen",
  "wasm-bindgen-futures",
  "web-sys",
@@ -828,15 +832,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "euclid"
-version = "0.22.11"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ad9cdb4b747e485a12abb0e6566612956c7a1bafa3bdb8d682c5b6d403589e48"
-dependencies = [
- "num-traits",
-]
-
-[[package]]
 name = "event-listener"
 version = "5.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -871,6 +866,11 @@ checksum = "1e6853b52649d4ac5c0bd02320cddc5ba956bdb407c4b75a2c6b75bf51500f8c"
 dependencies = [
  "simd-adler32",
 ]
+
+[[package]]
+name = "fearless_simd"
+version = "0.2.0"
+source = "git+https://github.com/raphlinus/fearless_simd?rev=e46bcfd#e46bcfd622dbd7edd8538c836d9b100b6101aa15"
 
 [[package]]
 name = "flate2"
@@ -987,17 +987,6 @@ name = "futures-core"
 version = "0.3.31"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "05f29059c0c2090612e8d742178b0580d2dc940c837851ad723096f87af6663e"
-
-[[package]]
-name = "futures-intrusive"
-version = "0.5.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1d930c203dd0b6ff06e0201a4a2fe9149b43c684fd4420555b26d21b1a02956f"
-dependencies = [
- "futures-core",
- "lock_api",
- "parking_lot",
-]
 
 [[package]]
 name = "futures-io"
@@ -1162,16 +1151,6 @@ name = "grid"
 version = "0.17.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "71b01d27060ad58be4663b9e4ac9e2d4806918e8876af8912afbddd1a91d5eaa"
-
-[[package]]
-name = "guillotiere"
-version = "0.6.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b62d5865c036cb1393e23c50693df631d3f5d7bcca4c04fe4cc0fd592e74a782"
-dependencies = [
- "euclid",
- "svg_fmt",
-]
 
 [[package]]
 name = "hashbrown"
@@ -2160,6 +2139,7 @@ version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1f9529efd019889b2a205193c14ffb6e2839b54ed9d2720674f10f4b04d87ac9"
 dependencies = [
+ "bytemuck",
  "color",
  "kurbo",
  "smallvec",
@@ -2710,12 +2690,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "svg_fmt"
-version = "0.4.5"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0193cc4331cfd2f3d2011ef287590868599a2f33c3e69bc22c1a3d3acf9e02fb"
-
-[[package]]
 name = "swash"
 version = "0.2.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3100,46 +3074,35 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b6c140620e7ffbb22c2dee59cafe6084a59b5ffc27a8859a5f0d494b5d52b6be"
 
 [[package]]
-name = "vello"
-version = "0.5.0"
+name = "vello_common"
+version = "0.0.1"
 source = "git+https://github.com/linebender/vello.git?rev=4d705c71ad3f8423444c08badfc741aee7a621bb#4d705c71ad3f8423444c08badfc741aee7a621bb"
 dependencies = [
  "bytemuck",
- "futures-intrusive",
- "log",
+ "fearless_simd",
  "peniko",
  "png",
- "skrifa",
- "static_assertions",
- "thiserror 2.0.12",
- "vello_encoding",
- "vello_shaders",
- "wgpu",
-]
-
-[[package]]
-name = "vello_encoding"
-version = "0.5.0"
-source = "git+https://github.com/linebender/vello.git?rev=4d705c71ad3f8423444c08badfc741aee7a621bb#4d705c71ad3f8423444c08badfc741aee7a621bb"
-dependencies = [
- "bytemuck",
- "guillotiere",
- "peniko",
  "skrifa",
  "smallvec",
 ]
 
 [[package]]
-name = "vello_shaders"
+name = "vello_hybrid"
 version = "0.5.0"
 source = "git+https://github.com/linebender/vello.git?rev=4d705c71ad3f8423444c08badfc741aee7a621bb#4d705c71ad3f8423444c08badfc741aee7a621bb"
 dependencies = [
  "bytemuck",
  "log",
- "naga",
  "thiserror 2.0.12",
- "vello_encoding",
+ "vello_common",
+ "vello_sparse_shaders",
+ "wgpu",
 ]
+
+[[package]]
+name = "vello_sparse_shaders"
+version = "0.0.1"
+source = "git+https://github.com/linebender/vello.git?rev=4d705c71ad3f8423444c08badfc741aee7a621bb#4d705c71ad3f8423444c08badfc741aee7a621bb"
 
 [[package]]
 name = "version_check"

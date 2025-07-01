@@ -17,7 +17,7 @@ reqwest = { version = "0.12.19", default-features = false, features = ["blocking
 [dependencies.craft]
 path = "../craft/crates/craft"
 default-features = false
-features = ["vello_renderer", "devtools", "accesskit", "sytem_fonts"]
+features = ["vello_hybrid_renderer", "devtools", "accesskit", "sytem_fonts"]
 package = "craft_gui"
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies.tokio]

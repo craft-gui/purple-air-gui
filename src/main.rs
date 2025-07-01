@@ -10,21 +10,15 @@ use craft::style::Weight;
 use craft::{components::{Component, ComponentSpecification}, elements::{Container, ElementStyles, Text}, palette, style::{AlignItems, Display, FlexDirection, JustifyContent}, Color};
 use std::str::FromStr;
 
-#[derive(Default)]
-pub struct PurpleAir {
-    sensor_data: Option<LocalSensorData>
-}
-
-fn temperature_f(temp: u64) -> String {
-    format!("{} °F", temp)
+const GRAY: Color = Color::from_rgb8(154, 154, 160);
+fn fahrenheit(value: u64) -> String {
+    format!("{} °F", value)
 }
 
 fn field(label: &str, value: &str) -> Text {
     Text::new(format!("{}: {}", label, value).as_str())
         .font_size(20.0)
 }
-
-const GRAY: Color = Color::from_rgb8(154, 154, 160);
 
 fn row() -> Container {
     Container::new()
@@ -36,6 +30,12 @@ fn column() -> Container {
     Container::new()
         .display(Display::Flex)
         .flex_direction(FlexDirection::Column)
+}
+
+
+#[derive(Default)]
+pub struct PurpleAir {
+    sensor_data: Option<LocalSensorData>
 }
 
 fn hardware_on_the_board(hardware_discovered: String) -> Vec<String> {
@@ -111,7 +111,7 @@ fn common_measurements(sensor_data: &LocalSensorData) -> Container {
                     .color(Color::from_rgb8(255, 183, 77))
             )
             .push(
-                Text::new(temperature_f(current_temp_f).as_str())
+                Text::new(fahrenheit(current_temp_f).as_str())
                     .font_size(21.0)
                     .color(palette::css::CADET_BLUE)
                     .color(Color::from_rgb8(255, 183, 77))
@@ -133,7 +133,7 @@ fn common_measurements(sensor_data: &LocalSensorData) -> Container {
                     .color(Color::from_rgb8(128, 203, 196))
             )
             .push(
-                Text::new(temperature_f(current_dewpoint_f).as_str())
+                Text::new(fahrenheit(current_dewpoint_f).as_str())
                     .font_size(21.0)
                     .color(palette::css::CADET_BLUE)
                     .color(Color::from_rgb8(128, 203, 196))
@@ -143,7 +143,7 @@ fn common_measurements(sensor_data: &LocalSensorData) -> Container {
     }
 
     if let Some(current_humidity) = sensor_data.current_humidity {
-        let humdity = row()
+        let humidity = row()
             .align_items(AlignItems::Center)
             .gap(10)
             .push(
@@ -161,7 +161,7 @@ fn common_measurements(sensor_data: &LocalSensorData) -> Container {
                     .color(Color::from_rgb8(129, 212, 250))
             );
         
-        common_measurements.push_in_place(humdity.component());   
+        common_measurements.push_in_place(humidity.component());   
     }
     
     common_measurements
@@ -173,8 +173,6 @@ impl Component for PurpleAir {
     type Message = LocalSensorData;
 
     fn view(context: &mut Context<Self>) -> ComponentSpecification {
-        let sensor_data = context.state().sensor_data.as_ref().unwrap();
-
         let mut device_container = column()
             .gap(20)
             .border_width("2px", "2px", "2px", "2px")
@@ -183,6 +181,12 @@ impl Component for PurpleAir {
             .height("100%")
             .padding("25px", "25px", "25px", "25px")
             .background(Color::from_rgb8(35, 37, 52));
+        
+        if context.state().sensor_data.is_none() {
+            return device_container.push(Text::new("Failed to fetch the sensor data. Retrying...")).component();    
+        }
+        
+        let sensor_data = context.state().sensor_data.as_ref().unwrap();
 
         let aqi_container = row().gap(25)
             .push(aqi_a(&sensor_data))
@@ -201,26 +205,38 @@ impl Component for PurpleAir {
     }
 
     fn update(context: &mut Context<Self>) {
-        let url = "http://10.0.0.158/json?live=true";
+        let url = include_str!("../device_url");
+
+        let fetch_and_retry = async move {
+            loop {
+                tokio::time::sleep(tokio::time::Duration::from_secs(10)).await;
+                if let Ok(res) = reqwest::get(url).await && let Ok(json_text) = res.text().await {
+                    let sensor_data: LocalSensorData = serde_json::from_str(json_text.as_str()).unwrap();
+                    
+                    return sensor_data;
+                }
+            }
+        };
+        
         if let craft::events::Message::CraftMessage(CraftMessage::Initialized) = *context.message() {
-            let json_data = reqwest::blocking::get(url).unwrap();
-            let sensor_data: LocalSensorData = serde_json::from_str(json_data.text().unwrap().as_str()).unwrap();
+            if let Ok(json_data) = reqwest::blocking::get(url) && let Ok(json_text) = json_data.text() {
+                let sensor_data: LocalSensorData = serde_json::from_str(json_text.as_str()).unwrap();
+                context.state_mut().sensor_data = Some(sensor_data);
+            }
             
-            context.state_mut().sensor_data = Some(sensor_data);
             context.event_mut().future(async move {
-                let json_data = reqwest::get(url).await.unwrap();
-                let sensor_data: LocalSensorData = serde_json::from_str(json_data.text().await.unwrap().as_str()).unwrap();
+                let sensor_data = fetch_and_retry.await;
                 Event::async_result(sensor_data)
             });
+            
+            return;
         }
 
         if let craft::events::Message::UserMessage(msg) = context.message() && let Some(sensor_data) = msg.downcast_ref::<LocalSensorData>() {
             context.state_mut().sensor_data = Some(sensor_data.clone());
     
             context.event_mut().future(async move {
-                tokio::time::sleep(tokio::time::Duration::from_secs(10)).await;
-                let json_data = reqwest::get(url).await.unwrap();
-                let sensor_data: LocalSensorData = serde_json::from_str(json_data.text().await.unwrap().as_str()).unwrap();
+                let sensor_data = fetch_and_retry.await;
                 Event::async_result(sensor_data)
             });
         }
